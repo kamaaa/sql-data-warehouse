@@ -3,6 +3,7 @@
  * @author:  Kamil Armatys
  * @date:    19/12/2016
 */
+
 SET SERVEROUTPUT ON;
 
 CREATE OR REPLACE PROCEDURE GENERATE_KA_USER ( startID IN INT, len IN INT, override IN INT ) 
@@ -42,13 +43,13 @@ BEGIN
   
   INSERT INTO ka_uzytkownicy(id, imie, nazwisko, haslo, email, data_ur, telefon)
   VALUES (
-    v_i + startID,   -- ID
-    v_name,          -- name
-    v_surname,       -- surname
-    TO_CHAR(DBMS_RANDOM.string('U', 40)),        -- password
+    v_i + startID,
+    INITCAP(v_name),
+    INITCAP(v_surname),
+    TO_CHAR(DBMS_RANDOM.string('U', 40)),
     v_email,
-    TO_DATE(TO_CHAR(SYSDATE - NUMTOYMINTERVAL(CAST(DBMS_RANDOM.value(15, 60) AS INT), 'YEAR'),'dd/mm/yyyy'),'dd/mm/yyyy'), -- date of birth
-    TO_CHAR(DBMS_RANDOM.value(100000000, 999999999), '999G999G999') -- telephone number
+    TO_DATE(TO_CHAR(SYSDATE - NUMTOYMINTERVAL(CAST(DBMS_RANDOM.value(15, 60) AS INT), 'YEAR'),'dd/mm/yyyy'),'dd/mm/yyyy'),
+    TO_CHAR(DBMS_RANDOM.value(100000000, 999999999), '999G999G999')
   );
   
   -- increment
@@ -166,15 +167,16 @@ BEGIN
   IF v_item = 1 THEN
     DBMS_OUTPUT.PUT_LINE('Item with ID ' || idItem || ' already exists. Use override option to replace item');
     RETURN;
-  ELSE
-    INSERT INTO ka_systemy(id, system_operacyjny, przegladarka, czas_ladowania)
-    VALUES(
-      idItem,
-      v_systems(ROUND(DBMS_RANDOM.value(1, 5))),
-      v_browsers(ROUND(DBMS_RANDOM.value(1, 8))),
-      v_time_loading
-    );
   END IF;
+  
+  -- add item
+  INSERT INTO ka_systemy(id, system_operacyjny, przegladarka, czas_ladowania)
+  VALUES(
+    idItem,
+    v_systems(ROUND(DBMS_RANDOM.value(1, 5))),
+    v_browsers(ROUND(DBMS_RANDOM.value(1, 8))),
+    v_time_loading
+  );
   
   -- save changes
   COMMIT;
