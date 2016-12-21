@@ -239,7 +239,7 @@ BEGIN
     
     -- generate other references data
     GENERATE_VU_GUEST(v_id, override);
-    GENERATE_VU_CLICKMAP(v_id, -1, ROUND(DBMS_RANDOM.value(1, 30)), override);
+    GENERATE_VU_CLICKMAP(v_id, -1, ROUND(DBMS_RANDOM.value(1, 30)));
     
     -- increment
     v_i := v_i + 1;
