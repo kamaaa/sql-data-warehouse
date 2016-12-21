@@ -480,7 +480,7 @@ BEGIN
   
   -- drop data if override
   IF override = 1 THEN
-    DBMS_OUTPUT.PUT_LINE('Drop all data from ka_sesje in month: ' || TO_CHAR(startDate, 'mm'));
+    DBMS_OUTPUT.PUT_LINE('Drop all data from ka_sesje in month: ' || TO_CHAR(startDate, 'mm/yyyy'));
     DELETE FROM ka_sesje
     WHERE TO_CHAR(data_wejscia, 'mm/yyyy') = TO_CHAR(startDate, 'mm/yyyy');
   END IF;
@@ -553,18 +553,33 @@ END GENERATE_KA_SESSIONS;
 /
 
 /**
- * 
+ * Utils for generate data into ka database
  *
+ * @param  type         VARCHAR2  Describe what we want to generate. Two possible options SITES or SESSIONS
+ * @param  length       INT       Specify how much data we want to generate
+ * @param  append       BOOLEAN   Optional. If true generated data will be append to exists data, otherwise all data will be deleted. Default false 
+ * @param  fixedLength  BOOLEAN   Optional. If true passed length will be not change, otherwise length will be in real max-length. Default false
+ * @param  date_start   DATE      Optional. For SESSIONS type only. 
+ * @param  date_end     DATE      Optional. For SESSIONS type only.
+ *
+ * @return void
 */
-CREATE OR REPLACE PROCEDURE GENERATE_KA(type IN VARCHAR2, length IN INT, append IN BOOLEAN DEFAULT FALSE, date_start IN DATE DEFAULT NULL, date_end IN DATE DEFAULT NULL)
+CREATE OR REPLACE PROCEDURE GENERATE_KA(type IN VARCHAR2, length IN INT, append IN BOOLEAN DEFAULT FALSE, fixedLength IN BOOLEAN DEFAULT FALSE, date_start IN DATE DEFAULT NULL, date_end IN DATE DEFAULT NULL)
 AS
   v_start_id INT;
   v_override INT;
+  v_length   INT;
+  v_st_count INT;
   
   v_current_date DATE;
 BEGIN
-  -- debug
---   DBMS_OUTPUT.PUT_LINE('Test');
+
+  -- set length for elements
+  IF fixedLength = FALSE THEN
+    v_length := DBMS_RANDOM.value(length / 2, length);
+  ELSE
+    v_length := length;
+  END IF;
   
   -- select what should be generated
   CASE UPPER(type)
@@ -579,102 +594,111 @@ BEGIN
       v_override := 0;
     ELSE
       -- set default start id and allow override
+      CLEAR_KA('SITES');
       v_start_id := 1;
       v_override := 1;
     END IF;
     
     -- run generate procedure
-    GENERATE_KA_USER(v_start_id, length, v_override);
+    GENERATE_KA_USER(v_start_id, v_length, v_override);
     
     -- generate sites
     IF append = TRUE THEN
       SELECT MAX(id)
       INTO v_start_id
       FROM ka_serwisy;
-      
-      -- disable override
-      v_override := 0;
-    ELSE
-      -- set default start id and allow override
-      v_start_id := 1;
-      v_override := 1;
     END IF;
     
     -- run generate procedure
-    GENERATE_KA_WEBS(v_start_id, length * 2, v_override);
-    
-    -- generate accounts
-    IF append = TRUE THEN
-      -- disable override
-      v_override := 0;
-    ELSE
-      -- allow override
-      v_override := 1;
-    END IF;
+    GENERATE_KA_WEBS(v_start_id, v_length * 2, v_override);
     
     -- run generate procedure
-    GENERATE_KA_ACCOUNTS(length, v_override);
+    GENERATE_KA_ACCOUNTS(v_length, v_override);
+    
+    -- add feedback
+    SELECT COUNT(ROWID)
+    INTO v_st_count
+    FROM ka_uzytkownicy;
+    
+    DBMS_OUTPUT.PUT_LINE('Generated ' || v_st_count || ' users');
+    
+    SELECT COUNT(ROWID)
+    INTO v_st_count
+    FROM ka_serwisy;
+    
+    DBMS_OUTPUT.PUT_LINE('Generated ' || v_st_count || ' webs');
+    
+    SELECT COUNT(ROWID)
+    INTO v_st_count
+    FROM ka_konta;
+    
+    DBMS_OUTPUT.PUT_LINE('Generated ' || v_st_count || ' accounts');
     
   WHEN 'SESSIONS' THEN
-    
-    IF date_end IS NULL THEN
-      IF date_start IS NULL THEN
-        DBMS_OUTPUT.PUT_LINE('Date start have to be defined');
-        RETURN;
-      END IF;
-      
-      IF append = TRUE THEN
-        SELECT MAX(id)
-        INTO v_start_id
-        FROM ka_sesje;
-        
-        -- disable override
-        v_override := 0;
-      
-      ELSE
-        -- delete all sessions
-        DELETE FROM ka_sesje;
-        
-        -- set default
-        v_start_id := 0;
-        v_override := 1;
-      END IF;
-      
-      GENERATE_KA_SESSIONS(date_start, v_start_id, length, v_override);
-      RETURN;
-    END IF;
     
     IF append = TRUE THEN
       SELECT MAX(id)
       INTO v_start_id
       FROM ka_sesje;
-      
+        
       -- disable override
       v_override := 0;
     ELSE
+      -- we can try clear data even if procedure not complete because we can rollback transition
       -- delete all sessions
-      DELETE FROM ka_sesje;
-      
-      -- set default start id and allow override
+      CLEAR_KA('SESSIONS');
+        
+      -- set default
       v_start_id := 1;
       v_override := 1;
+    END IF;
+    
+    IF date_end IS NULL THEN
+      IF date_start IS NULL THEN
+        DBMS_OUTPUT.PUT_LINE('Date start have to be defined');
+        RETURN;
+        ROLLBACK;
+      END IF;
+      
+      GENERATE_KA_SESSIONS(date_start, v_start_id, v_length, v_override);
+      
+      -- add feedback
+      SELECT COUNT(ROWID)
+      INTO v_st_count
+      FROM ka_sesje;
+        
+      DBMS_OUTPUT.PUT_LINE('Generated ' || v_st_count || ' sessions');
+      RETURN;
     END IF;
     
     -- we have a data range
     v_current_date := date_start;
     
     LOOP
-    -- end loop condition
-    EXIT WHEN TO_CHAR(v_current_date, 'mm/yyyy') = TO_CHAR(date_end, 'mm/yyyy');
-    
-    -- generate sessions
-    GENERATE_KA_SESSIONS(v_current_date, v_start_id, length, v_override);
-    
-    -- increment
-    v_current_date := v_current_date + INTERVAL '1' MONTH;
-    v_start_id := v_start_id + length;
+      -- end loop condition
+      EXIT WHEN TO_CHAR(v_current_date, 'mm/yyyy') = TO_CHAR(date_end, 'mm/yyyy');
+      
+      -- generate sessions
+      GENERATE_KA_SESSIONS(v_current_date, v_start_id, v_length, v_override);
+      
+      -- increment
+      v_current_date := v_current_date + INTERVAL '1' MONTH;
+      v_start_id := v_start_id + v_length;
+      
+      -- generate new length if fixed flag is not selected
+      IF fixedLength = FALSE THEN
+        v_length := DBMS_RANDOM.value(length / 2, length);
+      ELSE
+        v_length := length;
+      END IF;
     END LOOP;
     
+    -- add feedback
+    SELECT COUNT(ROWID)
+    INTO v_st_count
+    FROM ka_sesje;
+        
+    DBMS_OUTPUT.PUT_LINE('Generated ' || v_st_count || ' sessions');
   ELSE 
     DBMS_OUTPUT.PUT_LINE('Type not recognized. Use sites or sessions keywords');
   END CASE;
@@ -685,6 +709,26 @@ BEGIN
     ROLLBACK;
     
 END GENERATE_KA;
+/
+
+CREATE OR REPLACE PROCEDURE CLEAR_KA (type IN VARCHAR2)
+AS
+BEGIN
+  CASE UPPER(type)
+  WHEN 'SITES' THEN
+    DELETE FROM ka_konta;
+    DELETE FROM ka_uzytkownicy;
+    DELETE FROM ka_serwisy;
+  WHEN 'SESSIONS' THEN
+    DELETE FROM ka_zrodla;
+    DELETE FROM ka_systemy;
+    DELETE FROM ka_dane_demograficzne;
+    DELETE FROM ka_sesje;
+  
+  ELSE
+    DBMS_OUTPUT.PUT_LINE('Type was not recognized. Use SITES or SESSIONS');
+  END CASE;
+END CLEAR_KA;
 /
 
 SHOW ERRORS;
