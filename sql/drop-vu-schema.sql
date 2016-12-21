@@ -1,7 +1,13 @@
-DROP TABLE VU_GOSC;                                                             
-DROP TABLE VU_LOKACJA_GOSCIA;                                                   
-DROP TABLE VU_MAPA_KLIKOW;                                                      
-DROP TABLE VU_SESJA;                                                            
-DROP TABLE VU_STRONA;                                                           
-DROP TABLE VU_URZADZENIE;                                                       
-DROP TABLE VU_UZYTKOWNIK;                                                       
+/**
+ * @project:     PL/SQL DROP SCHEMA
+ * @author:      Kamil Armatys, Vlad Udovychenko
+ * @date:        19/12/2016
+*/
+
+DROP TABLE VU_GOSC;
+DROP TABLE VU_LOKACJA_GOSCIA;
+DROP TABLE VU_MAPA_KLIKOW;
+DROP TABLE VU_SESJA;
+DROP TABLE VU_STRONA;
+DROP TABLE VU_URZADZENIE;
+DROP TABLE VU_UZYTKOWNIK;

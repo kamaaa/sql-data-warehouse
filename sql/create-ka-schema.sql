@@ -1,3 +1,9 @@
+/**
+ * @project:     PL/SQL DATA GENERATORS
+ * @author:      Kamil Armatys, Vlad Udovychenko
+ * @date:        19/12/2016
+*/
+
 -- tabela u¿ytkownicy
 CREATE TABLE ka_uzytkownicy(
   id INT CONSTRAINT uzytkownicy_pk PRIMARY KEY,
@@ -15,7 +21,7 @@ CREATE TABLE ka_serwisy(
   nazwa VARCHAR2(150) NOT NULL,
   opis VARCHAR2(512) DEFAULT ' ' NOT NULL,
   domena VARCHAR2(100) NOT NULL,
-  branza VARCHAR2(100) NOT NULL
+  branza VARCHAR2(50) NOT NULL
 );
 
 -- tabela laczaca uzytkownicy serwisy
@@ -56,6 +62,6 @@ CREATE TABLE ka_dane_demograficzne(
   id INT CONSTRAINT dane_demo_pk PRIMARY KEY,
   kraj VARCHAR2(30) NOT NULL,
   jezyk VARCHAR2(30) NOT NULL,
-  miejscowosc VARCHAR2(100) DEFAULT ' ' NOT NULL,
+  miejscowosc VARCHAR2(45) DEFAULT ' ' NOT NULL,
   plec CHAR(1) NOT NULL
 );

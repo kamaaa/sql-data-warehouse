@@ -1,3 +1,9 @@
+/**
+ * @project:     PL/SQL DATA GENERATORS
+ * @author:      Kamil Armatys, Vlad Udovychenko
+ * @date:        19/12/2016
+*/
+
 CREATE TABLE vu_uzytkownik (
   id INT CONSTRAINT uzytkownik_pk PRIMARY KEY,
   imie VARCHAR2(45) NOT NULL,
@@ -11,8 +17,8 @@ CREATE TABLE vu_strona (
   id INT CONSTRAINT strona_pk PRIMARY KEY,
   uzytkownik_id INT CONSTRAINT strona_fk_uzytkownik REFERENCES vu_uzytkownik(id),
   nazwa VARCHAR2(45) NOT NULL,
-  adres VARCHAR2(45) NOT NULL,
-  kategoria VARCHAR2(45) NOT NULL
+  adres VARCHAR2(100) NOT NULL,
+  kategoria VARCHAR2(50) NOT NULL
 );
 
 CREATE TABLE vu_sesja (
