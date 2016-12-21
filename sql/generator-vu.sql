@@ -239,7 +239,7 @@ BEGIN
     
     -- generate other references data
     GENERATE_VU_GUEST(v_id, override);
-    GENERATE_VU_CLICKMAP(v_id, 1, ROUND(DBMS_RANDOM.value(1, 1000)), override);
+    GENERATE_VU_CLICKMAP(v_id, -1, ROUND(DBMS_RANDOM.value(1, 30)), override);
     
     -- increment
     v_i := v_i + 1;
@@ -257,16 +257,21 @@ BEGIN
 END GENERATE_VU_SESSIONS;
 /
 
-CREATE OR REPLACE PROCEDURE GENERATE_VU_CLICKMAP (sessionID IN INT, startID IN INT, len IN INT, override IN INT)
+CREATE OR REPLACE PROCEDURE GENERATE_VU_CLICKMAP (sessionID IN INT, startID IN INT, len IN INT)
 AS
-  v_i INT := 0;
-
+  v_i        INT := 1;
+  v_start_id INT := 0;
 BEGIN
-  -- drop data if override
-  IF override = 1 THEN
-    DBMS_OUTPUT.PUT_LINE('Drop all data from vu_mapa_klikow');
-    DELETE FROM VU_MAPA_KLIKOW
-    WHERE SESJA_ID = sessionID;
+  IF startID = -1 THEN
+    SELECT MAX(id)
+    INTO v_start_id
+    FROM vu_mapa_klikow;
+    
+    IF v_start_id IS NULL THEN
+      v_start_id := 0;
+    END IF;
+  ELSE
+    v_start_id := startID;
   END IF;
   
   LOOP
@@ -275,7 +280,7 @@ BEGIN
     -- add data
     INSERT INTO VU_MAPA_KLIKOW (id, sesja_id, click_x, click_y)
     VALUES(
-      v_i + startID,
+      v_i + v_start_id,
       sessionID,
       ROUND(DBMS_RANDOM.value(1, 1920)),
       ROUND(DBMS_RANDOM.value(1, 1080))
@@ -468,6 +473,179 @@ BEGIN
     ROLLBACK;
     
 END GENERATE_VU_GUEST;
+/
+
+CREATE OR REPLACE PROCEDURE CLEAR_VU(type IN VARCHAR2)
+AS
+BEGIN
+  CASE UPPER(type)
+  WHEN 'SITES' THEN
+    DELETE FROM vu_strona;
+    DELETE FROM vu_uzytkownik;
+  
+  WHEN 'SESSIONS' THEN
+    DELETE FROM vu_mapa_klikow;
+    DELETE FROM vu_sesja;
+    DELETE FROM vu_gosc;
+    DELETE FROM vu_lokacja_goscia;
+    DELETE FROM vu_urzadzenie;
+  
+  ELSE
+    DBMS_OUTPUT.PUT_LINE('Type not recognized. Use SITES or SESSIONS keywords');
+  END CASE;
+END CLEAR_VU;
+/
+
+/**
+ * Utils for generate data into vu database
+ *
+ * @param  type          VARCHAR2  Describe what we want to generate. Two possible options SITES or SESSIONS
+ * @param  length        INT       Specify how much data we want to generate
+ * @param  append        BOOLEAN   Optional. If true generated data will be append to exists data, otherwise all data will be deleted. Default false 
+ * @param  fixed_length  BOOLEAN   Optional. If true passed length will be not change, otherwise length will be in real max-length. Default false
+ * @param  date_start    DATE      Optional. For SESSIONS type only. 
+ * @param  date_end      DATE      Optional. For SESSIONS type only.
+ *
+ * @return void
+*/
+CREATE OR REPLACE PROCEDURE GENERATE_VU (type IN VARCHAR2, length IN INT, append IN BOOLEAN DEFAULT FALSE, fixed_length IN BOOLEAN DEFAULT FALSE, date_start IN DATE DEFAULT NULL, date_end IN DATE DEFAULT NULL)
+AS
+  v_start_id INT;
+  v_length   INT;
+  v_override INT;
+  v_st_count INT;
+  
+  v_current_date DATE;
+BEGIN 
+
+  -- set length for elements
+  IF fixed_length = FALSE THEN
+    v_length := DBMS_RANDOM.value(length / 2, length);
+  ELSE
+    v_length := length;
+  END IF;
+  
+  CASE UPPER(type)
+  WHEN 'SITES' THEN
+    -- generate users
+    -- check append option
+    IF append = TRUE THEN
+      SELECT MAX(id)
+      INTO v_start_id
+      FROM vu_uzytkownik;
+      
+      -- disable override
+      v_override := 0;
+    ELSE
+      -- set default start id and allow override
+      CLEAR_VU('SITES');
+      v_start_id := 1;
+      v_override := 1;
+    END IF;
+    
+    -- run generate procedure
+    GENERATE_VU_USER(v_start_id, v_length, v_override);
+    
+   -- generate pages
+    IF append = TRUE THEN
+      SELECT MAX(id)
+      INTO v_start_id
+      FROM vu_strona;
+    END IF;
+    
+    -- run generate procedure
+    GENERATE_VU_PAGES(v_start_id, v_length*2, v_override); 
+    
+    -- add feedback
+    SELECT COUNT(ROWID)
+    INTO v_st_count
+    FROM vu_uzytkownik;
+    
+    DBMS_OUTPUT.PUT_LINE('Generated ' || v_st_count || ' users');
+    
+    SELECT COUNT(ROWID)
+    INTO v_st_count
+    FROM vu_strona;
+    
+    DBMS_OUTPUT.PUT_LINE('Generated ' || v_st_count || ' webs');
+    
+  WHEN 'SESSIONS' THEN
+    
+    IF append = TRUE THEN
+      SELECT MAX(id)
+      INTO v_start_id
+      FROM vu_sesja;
+        
+      -- disable override
+      v_override := 0;
+    ELSE
+      -- we can try clear data even if procedure not complete because we can rollback transition
+      -- delete all sessions
+      CLEAR_VU('SESSIONS');
+        
+      -- set default
+      v_start_id := 1;
+      v_override := 1;
+    END IF;
+    
+    IF date_end IS NULL THEN
+      IF date_start IS NULL THEN
+        DBMS_OUTPUT.PUT_LINE('Date start have to be defined');
+        RETURN;
+        ROLLBACK;
+      END IF;
+      
+      GENERATE_VU_SESSIONS(date_start, v_start_id, v_length, v_override);
+      
+      -- add feedback
+      SELECT COUNT(ROWID)
+      INTO v_st_count
+      FROM vu_sesja;
+        
+      DBMS_OUTPUT.PUT_LINE('Generated ' || v_st_count || ' sessions');
+      RETURN;
+    END IF;
+    
+    -- we have a data range
+    v_current_date := date_start;
+    
+    LOOP
+      -- end loop condition
+      EXIT WHEN TO_CHAR(v_current_date, 'mm/yyyy') = TO_CHAR(date_end, 'mm/yyyy');
+      
+      -- generate sessions
+      GENERATE_VU_SESSIONS(v_current_date, v_start_id, v_length, v_override);
+      
+      -- increment
+      v_current_date := v_current_date + INTERVAL '1' MONTH;
+      v_start_id := v_start_id + v_length;
+      
+      -- generate new length if fixed flag is not selected
+      IF fixed_length = FALSE THEN
+        v_length := DBMS_RANDOM.value(length / 2, length);
+      ELSE
+        v_length := length;
+      END IF;
+    END LOOP;
+    
+    -- add feedback
+    SELECT COUNT(ROWID)
+    INTO v_st_count
+    FROM vu_sesja;
+        
+    DBMS_OUTPUT.PUT_LINE('Generated ' || v_st_count || ' sessions');
+    
+  ELSE 
+    DBMS_OUTPUT.PUT_LINE('Type not recognized. Use SITES or SESSIONS keywords');
+  
+  END CASE;
+  
+  EXCEPTION
+    WHEN OTHERS THEN
+    DBMS_OUTPUT.PUT_LINE('Fatal error: ' || SQLERRM);
+    ROLLBACK;
+    
+END GENERATE_VU;
 /
 
 SHOW ERRORS;

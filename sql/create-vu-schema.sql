@@ -23,14 +23,14 @@ CREATE TABLE vu_strona (
 
 CREATE TABLE vu_sesja (
   id INT CONSTRAINT sesja_pk PRIMARY KEY,
-  strona_id INT CONSTRAINT sesja_fk_strona REFERENCES vu_strona(id),
+  strona_id INT CONSTRAINT sesja_fk_strona REFERENCES vu_strona(id) ON DELETE CASCADE,
   czas_wejscia DATE NOT NULL,
   czas_wyjscia DATE NOT NULL
 );
 
 CREATE TABLE vu_mapa_klikow (
   id INT CONSTRAINT mapa_klikow_pk PRIMARY KEY,
-  sesja_id INT CONSTRAINT mapaklikow_fk_sesja REFERENCES vu_sesja(id),
+  sesja_id INT CONSTRAINT mapaklikow_fk_sesja REFERENCES vu_sesja(id) ON DELETE CASCADE,
   click_x NUMBER(4,0) NOT NULL,
   click_y NUMBER(4,0) NOT NULL
 );
