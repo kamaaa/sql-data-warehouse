@@ -1,5 +1,5 @@
 /**
- * @project:     PL/SQL DATA GENERATORS
+ * @project:     PL/SQL KA SCHEMA
  * @author:      Kamil Armatys, Vlad Udovychenko
  * @date:        19/12/2016
 */

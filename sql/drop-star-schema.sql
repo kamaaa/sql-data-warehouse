@@ -1,0 +1,13 @@
+/**
+ * @project:     PL/SQL DROP STAR SCHEMA
+ * @author:      Kamil Armatys, Vlad Udovychenko
+ * @date:        19/12/2016
+*/
+
+DROP TABLE G_CZAS;
+DROP TABLE G_KRAJ;
+DROP TABLE G_PLEC;
+DROP TABLE G_SESJA;
+DROP TABLE G_STRONY;
+DROP TABLE G_URZADZENIA;
+DROP TABLE G_WIEK;

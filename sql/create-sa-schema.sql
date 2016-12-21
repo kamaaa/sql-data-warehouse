@@ -1,5 +1,5 @@
 /**
- * @project:     PL/SQL DATA GENERATORS
+ * @project:     PL/SQL STAGING AREA SCHEMA
  * @author:      Kamil Armatys, Vlad Udovychenko
  * @date:        19/12/2016
 */
