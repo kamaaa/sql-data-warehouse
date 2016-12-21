@@ -473,11 +473,16 @@ BEGIN
   
   FETCH v_cursor INTO v_web_max, v_web_min;
   
+  IF v_web_max = 0 THEN
+    DBMS_OUTPUT.PUT_LINE('KA_SERWISY table is empty. Fill this table before generate sessions');
+    RETURN;
+  END IF;
+  
   -- drop data if override
   IF override = 1 THEN
-    DBMS_OUTPUT.PUT_LINE('Drop all data from ka_konta');
+    DBMS_OUTPUT.PUT_LINE('Drop all data from ka_sesje in month: ' || TO_CHAR(startDate, 'mm'));
     DELETE FROM ka_sesje
-    WHERE TO_CHAR(data_wejscia, 'mm') = TO_CHAR(startDate, 'mm');
+    WHERE TO_CHAR(data_wejscia, 'mm/yyyy') = TO_CHAR(startDate, 'mm/yyyy');
   END IF;
   
   -- prepare some data
@@ -528,9 +533,9 @@ BEGIN
     );
     
     -- generate other references data
-    GENERATE_KA_SYSTEMS(v_id, 1);
-    GENERATE_KA_SOURCES(v_id, 1);
-    GENERATE_KA_DEMOGRAPHICS(v_id, 1);
+    GENERATE_KA_SYSTEMS(v_id, override);
+    GENERATE_KA_SOURCES(v_id, override);
+    GENERATE_KA_DEMOGRAPHICS(v_id, override);
     
     -- increment
     v_i := v_i + 1;
@@ -546,4 +551,140 @@ BEGIN
       
 END GENERATE_KA_SESSIONS;
 /
+
+/**
+ * 
+ *
+*/
+CREATE OR REPLACE PROCEDURE GENERATE_KA(type IN VARCHAR2, length IN INT, append IN BOOLEAN DEFAULT FALSE, date_start IN DATE DEFAULT NULL, date_end IN DATE DEFAULT NULL)
+AS
+  v_start_id INT;
+  v_override INT;
+  
+  v_current_date DATE;
+BEGIN
+  -- debug
+--   DBMS_OUTPUT.PUT_LINE('Test');
+  
+  -- select what should be generated
+  CASE UPPER(type)
+  WHEN 'SITES' THEN
+    -- generate users
+    IF append = TRUE THEN
+      SELECT MAX(id)
+      INTO v_start_id
+      FROM ka_uzytkownicy;
+      
+      -- disable override
+      v_override := 0;
+    ELSE
+      -- set default start id and allow override
+      v_start_id := 1;
+      v_override := 1;
+    END IF;
+    
+    -- run generate procedure
+    GENERATE_KA_USER(v_start_id, length, v_override);
+    
+    -- generate sites
+    IF append = TRUE THEN
+      SELECT MAX(id)
+      INTO v_start_id
+      FROM ka_serwisy;
+      
+      -- disable override
+      v_override := 0;
+    ELSE
+      -- set default start id and allow override
+      v_start_id := 1;
+      v_override := 1;
+    END IF;
+    
+    -- run generate procedure
+    GENERATE_KA_WEBS(v_start_id, length * 2, v_override);
+    
+    -- generate accounts
+    IF append = TRUE THEN
+      -- disable override
+      v_override := 0;
+    ELSE
+      -- allow override
+      v_override := 1;
+    END IF;
+    
+    -- run generate procedure
+    GENERATE_KA_ACCOUNTS(length, v_override);
+    
+  WHEN 'SESSIONS' THEN
+    
+    IF date_end IS NULL THEN
+      IF date_start IS NULL THEN
+        DBMS_OUTPUT.PUT_LINE('Date start have to be defined');
+        RETURN;
+      END IF;
+      
+      IF append = TRUE THEN
+        SELECT MAX(id)
+        INTO v_start_id
+        FROM ka_sesje;
+        
+        -- disable override
+        v_override := 0;
+      
+      ELSE
+        -- delete all sessions
+        DELETE FROM ka_sesje;
+        
+        -- set default
+        v_start_id := 0;
+        v_override := 1;
+      END IF;
+      
+      GENERATE_KA_SESSIONS(date_start, v_start_id, length, v_override);
+      RETURN;
+    END IF;
+    
+    IF append = TRUE THEN
+      SELECT MAX(id)
+      INTO v_start_id
+      FROM ka_sesje;
+      
+      -- disable override
+      v_override := 0;
+    ELSE
+      -- delete all sessions
+      DELETE FROM ka_sesje;
+      
+      -- set default start id and allow override
+      v_start_id := 1;
+      v_override := 1;
+    END IF;
+    
+    -- we have a data range
+    v_current_date := date_start;
+    
+    LOOP
+    -- end loop condition
+    EXIT WHEN TO_CHAR(v_current_date, 'mm/yyyy') = TO_CHAR(date_end, 'mm/yyyy');
+    
+    -- generate sessions
+    GENERATE_KA_SESSIONS(v_current_date, v_start_id, length, v_override);
+    
+    -- increment
+    v_current_date := v_current_date + INTERVAL '1' MONTH;
+    v_start_id := v_start_id + length;
+    END LOOP;
+    
+  ELSE 
+    DBMS_OUTPUT.PUT_LINE('Type not recognized. Use sites or sessions keywords');
+  END CASE;
+  
+  EXCEPTION
+  WHEN OTHERS THEN
+    DBMS_OUTPUT.PUT_LINE('Fatal error: ' || SQLERRM);
+    ROLLBACK;
+    
+END GENERATE_KA;
+/
+
 SHOW ERRORS;
