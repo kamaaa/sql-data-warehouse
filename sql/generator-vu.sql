@@ -188,7 +188,7 @@ AS
 BEGIN
   -- drop data if override
   IF override = 1 THEN
-    DBMS_OUTPUT.PUT_LINE('Drop all data from vu_sesja for mouth: ' || TO_CHAR(startDate, 'mm/yyyy'));
+    DBMS_OUTPUT.PUT_LINE('Drop all data from vu_sesja for month: ' || TO_CHAR(startDate, 'mm/yyyy'));
     DELETE FROM vu_sesja
     WHERE TO_CHAR(czas_wejscia, 'mm/yyyy') = TO_CHAR(startDate, 'mm/yyyy');
   END IF;

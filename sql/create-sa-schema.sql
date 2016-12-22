@@ -29,8 +29,7 @@ CREATE TABLE sa_goscie (
   wiek NUMBER(3,0) DEFAULT 0 NOT NULL,
   plec CHAR(1) DEFAULT 'm' NOT NULL,
   kraj VARCHAR2(45) NOT NULL,
-  miasto VARCHAR2(45) NOT NULL,
-  jezyk VARCHAR2(30)
+  miasto VARCHAR2(45) NOT NULL
 );
 
 CREATE TABLE sa_urzadzenia(
