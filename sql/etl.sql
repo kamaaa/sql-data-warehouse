@@ -6,6 +6,7 @@ AS
   v_session_id INT := 0;
   v_page_id    INT := 0;
   v_map_id     INT := 0;
+  v_map_offset INT := 0;
   
   -- utils
   v_stats_count INT := 0;
@@ -112,6 +113,9 @@ BEGIN
   SELECT (id+v_page_id), adres, kategoria
   FROM VU_STRONA;
   
+  -- get session offset
+  v_map_offset := v_session_id -1;
+  
   -- open ka select
   OPEN v_cursor_vu;
   
@@ -127,13 +131,6 @@ BEGIN
       v_vu_row.czas_wejscia,
       v_vu_row.czas_wyjscia
     );
-    
-    -- copy all click map references to session_id
---    INSERT INTO SA_MAPY_KLIKOW(id, sesja_id, click_x, click_y)
---    SELECT (mk.id + v_map_id) id, v_session_id sesja_id, mk.click_x, mk.click_y
---    FROM VU_MAPA_KLIKOW mk
---    WHERE mk.sesja_id = v_vu_row.id
---    ORDER BY mk.id;
     
     INSERT INTO SA_GOSCIE (id, ip_adres, wiek, plec, kraj, miasto)
     VALUES(
@@ -153,14 +150,16 @@ BEGIN
     );
     
     -- increment
-    SELECT NVL(MAX(id), 0)
-    INTO v_map_id
-    FROM SA_MAPY_KLIKOW;
-    
     v_session_id := v_session_id + 1;
   END LOOP;
   
   CLOSE v_cursor_vu;
+  
+  --  copy all click map references to session_id
+  INSERT INTO SA_MAPY_KLIKOW(id, sesja_id, click_x, click_y)
+  SELECT (mk.id + v_map_id) id, (mk.sesja_id + v_map_offset) sesja_id, mk.click_x, mk.click_y
+  FROM VU_MAPA_KLIKOW mk
+  ORDER BY mk.id;
   
   -- add stats
   SELECT COUNT(ROWID)
