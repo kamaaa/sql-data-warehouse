@@ -188,9 +188,9 @@ AS
 BEGIN
   -- drop data if override
   IF override = 1 THEN
-    DBMS_OUTPUT.PUT_LINE('Drop all data from vu_sesja');
+    DBMS_OUTPUT.PUT_LINE('Drop all data from vu_sesja for mouth: ' || TO_CHAR(startDate, 'mm/yyyy'));
     DELETE FROM vu_sesja
-    WHERE TO_CHAR(czas_wejscia, 'mm') = TO_CHAR(startDate, 'mm');
+    WHERE TO_CHAR(czas_wejscia, 'mm/yyyy') = TO_CHAR(startDate, 'mm/yyyy');
   END IF;
   
   -- get page id range
