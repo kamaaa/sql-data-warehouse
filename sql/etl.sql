@@ -185,4 +185,64 @@ BEGIN
 END FILL_STAGGING_AREA;
 /
 
+CREATE OR REPLACE PROCEDURE FILL_STAR_MEASURE
+AS
+BEGIN
+  -- add gender
+  INSERT INTO G_PLEC (id, nazwa)
+  SELECT ROWNUM as id, plec as nazwa
+  FROM (
+    SELECT DISTINCT plec
+    FROM SA_GOSCIE
+  );
+  
+  -- add category
+  INSERT INTO G_STRONA(id, kategoria)
+  SELECT ROWNUM, kategoria
+  FROM (
+    select DISTINCT kategoria
+    FROM SA_STRONY
+  );
+  
+  -- add country
+  INSERT INTO G_KRAJ(id, nazwa)
+  SELECT ROWNUM, kraj as nazwa
+  FROM (
+    select DISTINCT kraj
+    FROM SA_GOSCIE
+  );
+  
+  -- add devices
+  INSERT INTO G_URZADZENIA(id, przegladarka, system_op)
+  SELECT ROWNUM, przegladarka, system_op
+  FROM (
+    SELECT DISTINCT przegladarka, system_op
+    FROM SA_URZADZENIA
+    ORDER BY system_op
+  );
+  
+  -- add time
+  INSERT INTO G_CZAS(id, dzien, tydzien, miesiac, rok)
+  SELECT TO_DATE(fulldata) id, dzien, tydzien, miesiac, rok
+  FROM (
+    SELECT DISTINCT TO_CHAR(czas_wejscia, 'dd/mm/yyyy') fulldata, TO_CHAR(czas_wejscia, 'dd') dzien, TO_CHAR(czas_wejscia, 'ww') tydzien,
+    TO_CHAR(czas_wejscia, 'mm') miesiac, TO_CHAR(czas_wejscia, 'yyyy') rok
+    FROM SA_SESJE
+    ORDER BY TO_CHAR(czas_wejscia, 'yyyy'), TO_CHAR(czas_wejscia, 'mm'), TO_CHAR(czas_wejscia, 'dd')
+  );
+  
+  -- add age group
+  INSERT ALL
+    INTO G_WIEK(id, wiekod, wiekdo) VALUES (1, 0,  14)
+    INTO G_WIEK(id, wiekod, wiekdo) VALUES (2, 15, 30)
+    INTO G_WIEK(id, wiekod, wiekdo) VALUES (3, 31, 46)
+    INTO G_WIEK(id, wiekod, wiekdo) VALUES (4, 47, 62)
+    INTO G_WIEK(id, wiekod, wiekdo) VALUES (5, 63, 999)
+  SELECT * FROM dual;
+  
+  COMMIT;
+  DBMS_OUTPUT.PUT_LINE('Measure tables fill uccessfully');
+END FILL_STAR_MEASURE;
+/
+
 SHOW ERRORS;
