@@ -213,22 +213,18 @@ BEGIN
   );
   
   -- add devices
-  INSERT INTO G_URZADZENIA(id, przegladarka, system_op)
-  SELECT ROWNUM, przegladarka, system_op
-  FROM (
-    SELECT DISTINCT przegladarka, system_op
-    FROM SA_URZADZENIA
-    ORDER BY system_op
-  );
+  INSERT ALL
+  INTO G_URZADZENIA(id, typ) VALUES(1, 'Mobilne')
+  INTO G_URZADZENIA(id, typ) VALUES(2, 'Stacjonarne')
+  SELECT * FROM dual;
   
   -- add time
-  INSERT INTO G_CZAS(id, dzien, tydzien, miesiac, rok)
-  SELECT TO_DATE(fulldata) id, dzien, tydzien, miesiac, rok
+  INSERT INTO G_CZAS(id, miesiac, rok)
+  SELECT TO_DATE(fulldata, 'mm/yyyy') id, miesiac, rok
   FROM (
-    SELECT DISTINCT TO_CHAR(czas_wejscia, 'dd/mm/yyyy') fulldata, TO_CHAR(czas_wejscia, 'dd') dzien, TO_CHAR(czas_wejscia, 'ww') tydzien,
-    TO_CHAR(czas_wejscia, 'mm') miesiac, TO_CHAR(czas_wejscia, 'yyyy') rok
+    SELECT DISTINCT TO_CHAR(czas_wejscia, 'mm/yyyy') fulldata, TO_CHAR(czas_wejscia, 'mm') miesiac, TO_CHAR(czas_wejscia, 'yyyy') rok
     FROM SA_SESJE
-    ORDER BY TO_CHAR(czas_wejscia, 'yyyy'), TO_CHAR(czas_wejscia, 'mm'), TO_CHAR(czas_wejscia, 'dd')
+    ORDER BY TO_CHAR(czas_wejscia, 'yyyy'), TO_CHAR(czas_wejscia, 'mm')
   );
   
   -- add age group
@@ -243,6 +239,39 @@ BEGIN
   COMMIT;
   DBMS_OUTPUT.PUT_LINE('Measure tables fill uccessfully');
 END FILL_STAR_MEASURE;
+/
+
+CREATE OR REPLACE PROCEDURE FILL_STAR_FACTS (timeInterval VARCHAR2 DEFAULT 'MONTH')
+AS
+BEGIN
+  INSERT INTO G_SESJA (czas_id, kraj_id, wiek_id, strona_id, urzadzenie_id, plec_id, sum_wizyt, sr_czas_sesji, sum_czas_sesji, sum_liczba_klikniec, sr_liczba_klikniec)
+  SELECT TRUNC(sesje.czas_wejscia, timeInterval) AS czas_id, goscie.krajid AS kraj_id, goscie.wiekid AS wiek_id, strony.katid AS strona_id, sesje.urzadzenieid AS urzadzenie_id, goscie.plec_id AS plec_id,
+   COUNT(sesje.id) AS sum_wizyt, AVG(sesje.dl_sesji) AS sr_czas_sesji, SUM(sesje.dl_sesji) AS sum_czas_sesji,
+   NVL(SUM(mapy_klikow.sumy), -1) AS sum_liczba_klikniec, NVL(AVG(mapy_klikow.sumy), -1) AS sr_liczba_klikniec
+  FROM (
+    SELECT s.id, s.strona_id, s.czas_wejscia, ROUND(24 * 60 * 60 * (s.czas_wyjscia - s.czas_wejscia)) dl_sesji, (CASE WHEN u.system_op IN('Android', 'iOS') THEN 1 ELSE 2 END) urzadzenieid
+    FROM SA_SESJE s
+    INNER JOIN SA_URZADZENIA u ON s.id = u.id
+  ) sesje 
+  INNER JOIN (
+    SELECT str.id, str2.id katid
+    FROM SA_STRONY str
+    INNER JOIN G_STRONA str2 USING (kategoria)
+  ) strony ON strony.id = sesje.strona_id
+  INNER JOIN (
+    SELECT g.id, k.id krajid, w.id wiekid, (CASE WHEN g.plec = 'k' THEN 1 ELSE 2 END) plec_id
+    FROM SA_GOSCIE g
+    INNER JOIN G_KRAJ k ON g.kraj = k.nazwa
+    INNER JOIN G_WIEK w ON g.wiek BETWEEN w.wiekod AND w.wiekdo
+  ) goscie ON sesje.id = goscie.id
+  LEFT JOIN (
+    SELECT mk.sesja_id id, COUNT(mk.sesja_id) sumy
+    FROM SA_MAPY_KLIKOW mk
+    GROUP BY mk.sesja_id
+  ) mapy_klikow ON sesje.id = mapy_klikow.id
+  GROUP BY TRUNC(sesje.czas_wejscia, timeInterval), goscie.krajid, goscie.wiekid, strony.katid, sesje.urzadzenieid, goscie.plec_id;
+  
+END FILL_STAR_FACTS;
 /
 
 SHOW ERRORS;

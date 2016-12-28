@@ -16,14 +16,11 @@ CREATE TABLE g_plec(
 
 CREATE TABLE g_urzadzenia(
   id INT NOT NULL CONSTRAINT g_urzadzenia_pk PRIMARY KEY,
-  przegladarka VARCHAR2(35) NOT NULL,
-  system_op VARCHAR2(30) NOT NULL
+  typ VARCHAR2(35) NOT NULL
 );
 
 CREATE TABLE g_czas(
   id DATE NOT NULL CONSTRAINT g_czas_pk PRIMARY KEY,
-  dzien NUMBER(2) NOT NULL,
-  tydzien NUMBER(3) NOT NULL,
   miesiac NUMBER(2) NOT NULL,
   rok NUMBER(4) NOT NULL
 );
@@ -35,7 +32,8 @@ CREATE TABLE g_kraj(
 
 CREATE TABLE g_wiek(
   id INT NOT NULL CONSTRAINT g_wiek_pk PRIMARY KEY,
-  grupa_wiek CHAR(8) NOT NULL
+  wiekod NUMBER(3) NOT NULL,
+  wiekdo NUMBER(3) NOT NULL
 );
 
 CREATE TABLE g_sesja(
@@ -66,6 +64,7 @@ CREATE BITMAP INDEX g_sesja_urzadzenie_bix ON g_sesja(urzadzenie_id) LOCAL;
 
 -- bitmap index on web category
 CREATE BITMAP INDEX g_strona_kat_bix ON g_strona(kategoria);
+CREATE BITMAP INDEX g_kraj_nazwa_bix ON g_kraj(nazwa);
 CREATE BITMAP INDEX g_plec_nazwa_bix ON g_plec(nazwa);
 
 -- join bitmap index 
