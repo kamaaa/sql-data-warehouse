@@ -7,6 +7,15 @@
 
 SET SERVEROUTPUT ON;
 
+/**
+ * Generate random data into vu_uzytkownik
+ *
+ * @param  startID   INT  Define offset for elements
+ * @param  len       INT  Specify how much data will be generate
+ * @param  override  INT  If false generated data will be append to exists data, otherwise all data will be deleted. 
+ *
+ * @return void
+*/
 CREATE OR REPLACE PROCEDURE GENERATE_VU_USER ( startID IN INT, len IN INT, override IN INT ) 
 AS
   TYPE StringArray IS VARRAY(33) OF vu_uzytkownik.imie%TYPE;
@@ -53,6 +62,18 @@ BEGIN
   IF override = 1 THEN
     DBMS_OUTPUT.PUT_LINE('Drop all data from vu_uzytkownik');
     DELETE FROM vu_uzytkownik;
+    
+  ELSE
+    SELECT MAX(id)
+    INTO v_i
+    FROM vu_uzytkownik;
+    
+    IF startID <= v_i THEN
+      DBMS_OUTPUT.PUT_LINE('startID have to be '|| v_i+1 ||' at least if override argument is set to false');
+      RETURN;
+    END IF;
+    
+    v_i := 0;
   END IF;
   
   -- starting generate data
@@ -87,9 +108,18 @@ BEGIN
 END GENERATE_VU_USER;
 /
 
+/**
+ * Generate random data into vu_strona
+ *
+ * @param  startID   INT  Define offset for elements
+ * @param  len       INT  Specify how much data will be generate
+ * @param  override  INT  If false generated data will be append to exists data, otherwise all data will be deleted. 
+ *
+ * @return void
+*/
 CREATE OR REPLACE PROCEDURE GENERATE_VU_PAGES ( startID IN INT, len IN INT, override IN INT )
 AS
-  TYPE StringArray IS VARRAY(13) OF KA_SERWISY.BRANZA%TYPE;
+  TYPE StringArray IS VARRAY(13) OF VU_STRONA.KATEGORIA%TYPE;
   TYPE DomainArray IS VARRAY(5) OF CHAR(3);
   v_categories StringArray;
   v_domainsEnd DomainArray;
@@ -123,6 +153,18 @@ BEGIN
   IF override = 1 THEN
     DBMS_OUTPUT.PUT_LINE('Drop all data from vu_strona');
     DELETE FROM VU_STRONA;
+  
+  ELSE
+    SELECT MAX(id)
+    INTO v_i
+    FROM vu_uzytkownik;
+    
+    IF startID <= v_i THEN
+      DBMS_OUTPUT.PUT_LINE('startID have to be '|| v_i+1 ||' at least if override argument is set to false');
+      RETURN;
+    END IF;
+    
+    v_i := 0;
   END IF;
   
   LOOP
@@ -167,6 +209,17 @@ BEGIN
 END GENERATE_VU_PAGES;
 /
 
+/**
+ * Generate random data into vu_sesja. Sessions will be generated in whole month, 
+ * so it's important to pass month and year in first argument. e.g. TO_DATE('01/10/2016, 'dd/mm/yyyy')
+ *
+ * @param  startDate  DATE  Define in which month and year session will be generated
+ * @param  startID    INT   Define offset for id elements
+ * @param  len        INT   Specify how much data will be generate
+ * @param  override   INT   If true all data which contains date passed by first argument will be deleted before generator run
+ *
+ * @return void
+*/
 CREATE OR REPLACE PROCEDURE GENERATE_VU_SESSIONS (startDate IN DATE, startID IN INT, len IN INT, override IN INT)
 AS
   v_day        INT;
@@ -257,7 +310,16 @@ BEGIN
 END GENERATE_VU_SESSIONS;
 /
 
-CREATE OR REPLACE PROCEDURE GENERATE_VU_CLICKMAP (sessionID IN INT, startID IN INT, len IN INT)
+/**
+ * Generate random data into vu_mapa_klikow
+ *
+ * @param  sessionID  INT  Define for which session data will be generated
+ * @param  len        INT  Specify how much data will be generate
+ * @param  startID    INT  Optional. Define offset for elements, if startID is -1, offset will be set automatically
+ *
+ * @return void
+*/
+CREATE OR REPLACE PROCEDURE GENERATE_VU_CLICKMAP (sessionID IN INT, len IN INT, startID IN INT DEFAULT -1)
 AS
   v_i        INT := 1;
   v_start_id INT := 0;
@@ -301,6 +363,14 @@ BEGIN
 END GENERATE_VU_CLICKMAP;
 /
 
+/**
+ * Generate random data into vu_lokacja_goscia
+ *
+ * @param  idItem    INT  ID for new item
+ * @param  override  INT  Specify if procedure should replace element, if it already exists
+ *
+ * @return void
+*/
 CREATE OR REPLACE PROCEDURE GENERATE_VU_LOCATION (idItem IN INT, override IN INT)
 AS
   TYPE StringArray IS VARRAY(30) OF VARCHAR2(30);
@@ -370,6 +440,14 @@ BEGIN
 END GENERATE_VU_LOCATION;
 /
 
+/**
+ * Generate random data into vu_urzadzenie
+ *
+ * @param  idItem    INT  ID for new item
+ * @param  override  INT  Specify if procedure should replace element, if it already exists
+ *
+ * @return void
+*/
 CREATE OR REPLACE PROCEDURE GENERATE_VU_DEVICE (idItem IN INT, override IN INT)
 AS
   TYPE StringArray IS VARRAY(10) OF VARCHAR2(35);
@@ -415,6 +493,14 @@ BEGIN
 END GENERATE_VU_DEVICE;
 /
 
+/**
+ * Generate random data into vu_gosc
+ *
+ * @param  idItem    INT  ID for new item
+ * @param  override  INT  Specify if procedure should replace element, if it already exists
+ *
+ * @return void
+*/
 CREATE OR REPLACE PROCEDURE GENERATE_VU_GUEST (itemID IN INT, override IN INT)
 AS
   v_item INT;
@@ -475,6 +561,13 @@ BEGIN
 END GENERATE_VU_GUEST;
 /
 
+/**
+ * Utils for delete data from vu database
+ *
+ * @param  type  VARCHAR2  Describe what we want to delete. Two possible options SITES or SESSIONS
+ *
+ * @return void
+*/
 CREATE OR REPLACE PROCEDURE CLEAR_VU(type IN VARCHAR2)
 AS
 BEGIN

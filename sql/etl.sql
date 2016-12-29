@@ -1,5 +1,11 @@
 SET SERVEROUTPUT ON;
 
+/**
+ * @project: PL/SQL ETL
+ * @author:  Kamil Armatys, Vlad Udovychenko
+ * @date:    19/12/2016
+*/
+
 CREATE OR REPLACE PROCEDURE FILL_STAGGING_AREA(append BOOLEAN DEFAULT FALSE)
 AS  
   -- fields
@@ -185,7 +191,7 @@ BEGIN
 END FILL_STAGGING_AREA;
 /
 
-CREATE OR REPLACE PROCEDURE FILL_STAR_MEASURE
+CREATE OR REPLACE PROCEDURE FILL_STAR_DIMENSION
 AS
 BEGIN
   -- add gender
@@ -238,7 +244,7 @@ BEGIN
   
   COMMIT;
   DBMS_OUTPUT.PUT_LINE('Measure tables fill uccessfully');
-END FILL_STAR_MEASURE;
+END FILL_STAR_DIMENSION;
 /
 
 CREATE OR REPLACE PROCEDURE FILL_STAR_FACTS (timeInterval VARCHAR2 DEFAULT 'MONTH')
@@ -270,6 +276,9 @@ BEGIN
     GROUP BY mk.sesja_id
   ) mapy_klikow ON sesje.id = mapy_klikow.id
   GROUP BY TRUNC(sesje.czas_wejscia, timeInterval), goscie.krajid, goscie.wiekid, strony.katid, sesje.urzadzenieid, goscie.plec_id;
+  
+  COMMIT;
+  DBMS_OUTPUT.PUT_LINE('Fact table fill uccessfully');
   
 END FILL_STAR_FACTS;
 /

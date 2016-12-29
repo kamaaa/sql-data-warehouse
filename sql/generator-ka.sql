@@ -6,16 +6,27 @@
 
 SET SERVEROUTPUT ON;
 
+/**
+ * Generate random data into ka_uzytkownicy
+ *
+ * @param  startID   INT  Define offset for elements
+ * @param  len       INT  Specify how much data will be generate
+ * @param  override  INT  If false generated data will be append to exists data, otherwise all data will be deleted. 
+ *
+ * @return void
+*/
 CREATE OR REPLACE PROCEDURE GENERATE_KA_USER ( startID IN INT, len IN INT, override IN INT ) 
 AS
-  v_i INT := 0;
   TYPE StringArray IS VARRAY(30) OF ka_uzytkownicy.imie%TYPE;
   TYPE StringArray2 IS VARRAY(33) OF ka_uzytkownicy.nazwisko%TYPE;
-  v_names StringArray;
+  
+  v_i        INT := 0;
+  v_names    StringArray;
   v_surnames StringArray2;
-  v_name ka_uzytkownicy.imie%TYPE;
+  
+  v_name    ka_uzytkownicy.imie%TYPE;
   v_surname ka_uzytkownicy.nazwisko%TYPE;
-  v_email ka_uzytkownicy.email%TYPE;
+  v_email   ka_uzytkownicy.email%TYPE;
 BEGIN
   -- define name
   v_names := StringArray('adam', 'ewa', 'adrian', 'kamil', 'joanna', 'krzysztof', 'anna', 'kacper', 'grzegorz', 'maria', 'weronika', 'marcin',
@@ -31,6 +42,17 @@ BEGIN
   IF override = 1 THEN
     DBMS_OUTPUT.PUT_LINE('Drop all data from ka_uzytkownicy');
     DELETE FROM ka_uzytkownicy;
+  ELSE
+    SELECT MAX(id)
+    INTO v_i
+    FROM ka_uzytkownicy;
+    
+    IF startID <= v_i THEN
+      DBMS_OUTPUT.PUT_LINE('startID have to be '|| v_i+1 ||' at least if override argument is set to false');
+      RETURN;
+    END IF;
+    
+    v_i := 0;
   END IF;
   
   -- starting generate data
@@ -65,6 +87,15 @@ BEGIN
 END GENERATE_KA_USER;
 /
 
+/**
+ * Generate random data into ka_serwisy
+ *
+ * @param  startID   INT  Define offset for elements
+ * @param  len       INT  Specify how much data will be generate
+ * @param  override  INT  If false generated data will be append to exists data, otherwise all data will be deleted. 
+ *
+ * @return void
+*/
 CREATE OR REPLACE PROCEDURE GENERATE_KA_WEBS ( startID IN INT, len IN INT, override IN INT )
 AS
   TYPE StringArray IS VARRAY(13) OF KA_SERWISY.BRANZA%TYPE;
@@ -94,6 +125,17 @@ BEGIN
   IF override = 1 THEN
     DBMS_OUTPUT.PUT_LINE('Drop all data from ka_serwisy');
     DELETE FROM ka_serwisy;
+  ELSE
+    SELECT MAX(id)
+    INTO v_i
+    FROM ka_serwisy;
+    
+    IF startID <= v_i THEN
+      DBMS_OUTPUT.PUT_LINE('startID have to be '|| v_i+1 ||' at least if override argument is set to false');
+      RETURN;
+    END IF;
+    
+    v_i := 0;
   END IF;
   
   LOOP
@@ -137,6 +179,14 @@ BEGIN
 END GENERATE_KA_WEBS;
 /
 
+/**
+ * Generate random data into ka_systemy
+ *
+ * @param  idItem    INT  ID for new item
+ * @param  override  INT  Specify if procedure should replace element, if it already exists
+ *
+ * @return void
+*/
 CREATE OR REPLACE PROCEDURE GENERATE_KA_SYSTEMS (idItem IN INT, override IN INT)
 AS
   TYPE StringArray IS VARRAY(10) OF VARCHAR2(35);
@@ -188,6 +238,14 @@ BEGIN
 END GENERATE_KA_SYSTEMS;
 /
 
+/**
+ * Generate random data into ka_zrodla
+ *
+ * @param  idItem    INT  ID for new item
+ * @param  override  INT  Specify if procedure should replace element, if it already exists
+ *
+ * @return void
+*/
 CREATE OR REPLACE PROCEDURE GENERATE_KA_SOURCES (idItem IN INT, override IN INT)
 AS
   TYPE StringArray IS VARRAY(10) OF VARCHAR2(35);
@@ -270,6 +328,14 @@ BEGIN
 END GENERATE_KA_SOURCES;
 /
 
+/**
+ * Generate random data into ka_dane_demograficzne
+ *
+ * @param  idItem    INT  ID for new item
+ * @param  override  INT  Specify if procedure should replace element, if it already exists
+ *
+ * @return void
+*/
 CREATE OR REPLACE PROCEDURE GENERATE_KA_DEMOGRAPHICS (idItem IN INT, override IN INT)
 AS
   TYPE StringArray IS VARRAY(30) OF VARCHAR2(30);
@@ -364,6 +430,14 @@ BEGIN
 END GENERATE_KA_DEMOGRAPHICS;
 /
 
+/**
+ * Generate random data into ka_konta
+ *
+ * @param  len       INT  Specify how much data will be generate
+ * @param  override  INT  If true all data will be delete from table before generator run
+ *
+ * @return void
+*/
 CREATE OR REPLACE PROCEDURE GENERATE_KA_ACCOUNTS (len IN INT, override IN INT)
 AS
   TYPE TCURSOR IS REF CURSOR;
@@ -449,6 +523,17 @@ BEGIN
 END GENERATE_KA_ACCOUNTS;
 /
 
+/**
+ * Generate random data into ka_sesje. Sessions will be generated in whole month, 
+ * so it's important to pass month and year in first argument. e.g. TO_DATE('01/10/2016, 'dd/mm/yyyy')
+ *
+ * @param  startDate  DATE  Define in which month and year session will be generated
+ * @param  startID    INT   Define offset for id elements
+ * @param  len        INT   Specify how much data will be generate
+ * @param  override   INT   If true all data which contains date passed by first argument will be deleted before generator run
+ *
+ * @return void
+*/
 CREATE OR REPLACE PROCEDURE GENERATE_KA_SESSIONS (startDate IN DATE, startID IN INT, len IN INT, override IN INT)
 AS
   TYPE TCURSOR IS REF CURSOR;
@@ -468,7 +553,7 @@ AS
 BEGIN
   -- get web range
   OPEN v_cursor FOR
-  SELECT MAX(ID), MIN(ID)
+  SELECT NVL(MAX(ID), 0), NVL(MIN(ID), 0)
   FROM ka_serwisy;
   
   FETCH v_cursor INTO v_web_max, v_web_min;
@@ -553,7 +638,7 @@ END GENERATE_KA_SESSIONS;
 /
 
 /**
- * Utils for generate data into ka database
+ * Utils for generate data into ka database. 
  *
  * @param  type         VARCHAR2  Describe what we want to generate. Two possible options SITES or SESSIONS
  * @param  length       INT       Specify how much data we want to generate
@@ -711,6 +796,13 @@ BEGIN
 END GENERATE_KA;
 /
 
+/**
+ * Utils for delete data from ka database
+ *
+ * @param  type  VARCHAR2  Describe what we want to delete. Two possible options SITES or SESSIONS
+ *
+ * @return void
+*/
 CREATE OR REPLACE PROCEDURE CLEAR_KA (type IN VARCHAR2)
 AS
 BEGIN
