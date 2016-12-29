@@ -1,3 +1,9 @@
+/**
+ * @project: Web warehouse
+ * @author:  Kamil Armatys, Vlad Udovychenko
+ * @data:    20/12/2016
+*/
+
 SET SERVEROUTPUT ON;
 
 ALTER SESSION SET NLS_DATE_FORMAT = 'dd/mm/yyyy hh24:mi:ss';
